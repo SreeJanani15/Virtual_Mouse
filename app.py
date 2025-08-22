@@ -2,36 +2,52 @@ import cv2
 import mediapipe as mp
 from controller import Controller
 
-cap = cv2.VideoCapture(0)
+# Open webcam
+camera = cv2.VideoCapture(0)
 
-mpHands = mp.solutions.hands
-hands = mpHands.Hands()
-mpDraw = mp.solutions.drawing_utils
+# Initialize Mediapipe Hands
+mediapipe_hands = mp.solutions.hands
+hand_tracker = mediapipe_hands.Hands()
+drawing_utils = mp.solutions.drawing_utils
 
 while True:
-   success, img = cap.read()
-   img = cv2.flip(img, 1)
+    # Capture video frame
+    frame_captured, frame = camera.read()
+    frame = cv2.flip(frame, 1)
 
-   imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-   results = hands.process(imgRGB)
+    # Convert frame to RGB for Mediapipe
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    detection_results = hand_tracker.process(frame_rgb)
 
-   if results.multi_hand_landmarks:
-         Controller.hand_Landmarks = results.multi_hand_landmarks[0]
-         mpDraw.draw_landmarks(img, Controller.hand_Landmarks, mpHands.HAND_CONNECTIONS)
-         
-         Controller.update_fingers_status()
-         Controller.cursor_moving()
-         Controller.detect_scrolling()
-         Controller.detect_zoomming()
-         Controller.detect_clicking()
-         Controller.detect_dragging()
-         Controller.detect_minimize()
-         Controller.detect_maximize()
-         Controller.detect_close()
+    if detection_results.multi_hand_landmarks:
+        # Get first detected hand landmarks
+        Controller.hand_landmarks = detection_results.multi_hand_landmarks[0]
 
-         if Controller.detect_exit_gesture():
-               break  
+        # Draw landmarks on frame
+        drawing_utils.draw_landmarks(
+            frame,
+            Controller.hand_landmarks,
+            mediapipe_hands.HAND_CONNECTIONS
+        )
 
-   cv2.imshow('Virtual Mouse', img)
-   if cv2.waitKey(5) & 0xff == 27:
-      break
+        # Perform gesture-based actions
+        Controller.update_fingers_status()
+        Controller.cursor_moving()
+        Controller.detect_scrolling()
+        Controller.detect_zooming()
+        Controller.detect_clicking()
+        Controller.detect_dragging()
+        Controller.detect_minimize()
+        Controller.detect_maximize()
+        Controller.detect_close()
+
+        # Exit gesture
+        if Controller.detect_exit_gesture():
+            break  
+
+    # Show the frame
+    cv2.imshow('Virtual Mouse', frame)
+
+    # Exit on ESC key
+    if cv2.waitKey(5) & 0xFF == 27:
+        break
